@@ -17,8 +17,18 @@ using namespace frc;
 using namespace std;
 using namespace rev;
 
+
+
 class Robot: public TimedRobot {
   public:
+  bool init=true;
+  bool f1=false;
+  bool t1=false;
+  bool t2=false;
+  bool f2=false;
+  bool shoot=false;
+  bool complete=false;
+
   //Joystick axes
   int joy_x2 = 4;
   int joy_y1 = 5;
@@ -95,6 +105,7 @@ class Robot: public TimedRobot {
   void AutonomousInit() override {
     gameTimer -> Start();
     gameTimer -> Reset();
+
    
     ultra ->SetAutomaticMode(true);
     SmartDashboard::PutNumber("Power",0);
@@ -103,6 +114,7 @@ class Robot: public TimedRobot {
   }
 
   void AutonomousPeriodic() override {
+    
 
     float y1 ;
     float y2 ;
@@ -136,13 +148,7 @@ class Robot: public TimedRobot {
       y2 = 0;
       }
     }else if(m_Selection == AutoOptions::Auto3){
-      bool init=true;
-      bool f1=false;
-      bool t1=false;
-      bool t2=false;
-      bool f2=false;
-      bool shoot=false;
-      bool complete=false;
+      
       double dist = ultra -> GetRange().value();
       double target = SmartDashboard::GetNumber("straight meters",0);
       double target2 = SmartDashboard::GetNumber("straight meters 2",0);
@@ -158,6 +164,7 @@ class Robot: public TimedRobot {
       }else if (dist >= 2.7 && f1){
         y1 = -1.0;
         y2 = 1.0;
+        
       }else if (dist < 2.7 && f1){
         y1 = 0;
         y2 = 0;
