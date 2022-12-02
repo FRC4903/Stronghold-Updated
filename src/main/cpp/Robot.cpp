@@ -4,6 +4,7 @@
 #include <fmt/core.h>
 #include <iostream>
 #include <frc/smartdashboard/SmartDashboard.h>
+#include <frc/smartDashboard/SendableChooser.h>
 #include "ctre/Phoenix.h"
 #include <frc/Encoder.h>
 #include <frc/Joystick.h>
@@ -52,11 +53,12 @@ class Robot: public TimedRobot {
   rev::SparkMaxRelativeEncoder en1 = shoot1.GetEncoder();
   Timer *gameTimer = new Timer();
 
-  Ultrasonic *ultra = new Ultrasonic(0,1);
+  Ultrasonic *ultra = new Ultrasonic(0,1); 
   // Ultrasonic ultra{0,1};
   double power = 0.1;
   //construct
- 
+  enum AutoOptions { Auto1, Auto2, Auto3, Auto4, Auto5 }; 
+  SendableChooser<AutoOptions> m_chooser;
   Robot():
     left_1(1),
     left_2(2),
@@ -66,7 +68,7 @@ class Robot: public TimedRobot {
     conveyer(8)
   {}
   void RobotInit() {
-   
+    
     //initializing
     left_1.Set(ControlMode::PercentOutput, 0);
     left_2.Set(ControlMode::PercentOutput, 0);
@@ -76,44 +78,37 @@ class Robot: public TimedRobot {
     conveyer.Set(ControlMode::PercentOutput, 0);
 
     CameraServer::GetInstance()->StartAutomaticCapture();
-   
-   
+
+    //chooser stuff
+    
+    
   }
   //the names explain idk what else you want
   void RobotPeriodic() {}
   void TestInit(){
-    ultra ->SetAutomaticMode(true);
-    SmartDashboard::PutNumber("Power",0);
-    SmartDashboard::PutBoolean("Switch",false);
-    SmartDashboard::PutBoolean("Conveyer",false);
+    
    }
   void TestPeriodic(){
-    SmartDashboard::PutNumber("Ultrasonic Inches", ultra -> GetRange().value());
-   
-    double p = frc::SmartDashboard::GetNumber("Power", 0);
-   
-    shoot1.Set(p);
-    shoot2.Set(-p);
-    SmartDashboard::PutNumber("shoot1 rpm", en1.GetVelocity());
-    SmartDashboard::PutNumber("shoot1 pos", en1.GetPosition());
-   
-
-    if(SmartDashboard::GetBoolean("Conveyer",false)){conveyer.Set(ControlMode::PercentOutput, 1);}
-    else{conveyer.Set(ControlMode::PercentOutput, 0);}
+    
    
   }
   void AutonomousInit() override {
     gameTimer -> Start();
     gameTimer -> Reset();
-    // SmartDashboard::PutNumberArray("time 1,2",(1,2,3));
    
+    ultra ->SetAutomaticMode(true);
+    SmartDashboard::PutNumber("Power",0);
+    SmartDashboard::PutBoolean("Switch",false);
+    SmartDashboard::PutBoolean("Conveyer",false);
   }
 
   void AutonomousPeriodic() override {
 
     float y1 ;
     float y2 ;
-    double time1 = SmartDashboard::GetNumber("turn first",0);
+    AutoOptions m_Selection = m_chooser.GetSelected();
+    if (m_Selection == AutoOptions::Auto1){
+      double time1 = SmartDashboard::GetNumber("turn first",0);
     SmartDashboard::PutNumber("turn first periodic copy",time1);
     // double timesCopy[5] = frc::SmartDashboard::GetNumberArray("times",0);
     if(gameTimer ->Get() < units::second_t{time1}){
@@ -125,8 +120,72 @@ class Robot: public TimedRobot {
       y1 = 0;
       y2 = 0;
       SmartDashboard::PutBoolean("status",false);
-     
+      
+      }
+
+    }else if(m_Selection == AutoOptions::Auto2){
+      double time1 = SmartDashboard::GetNumber("go straight",0);
+      if (gameTimer -> Get() < units::second_t{time1}) {
+      // Drive forwards half speed
+      y1 = 1.0*0.844;
+      y2 = 1.0;
+      intake.Set(ControlMode::PercentOutput, -1);
+      conveyer.Set(ControlMode::PercentOutput, 1);
+    } else if (gameTimer -> Get() < units::second_t{time1+0.7} && gameTimer -> Get() > units::second_t{time1}){
+      y1 = 0;
+      y2 = 0;
+      }
+    }else if(m_Selection == AutoOptions::Auto3){
+      bool init=true;
+      bool f1=false;
+      bool t1=false;
+      bool t2=false;
+      bool f2=false;
+      bool shoot=false;
+      bool complete=false;
+      double dist = ultra -> GetRange().value();
+      double target = SmartDashboard::GetNumber("straight meters",0);
+      double target2 = SmartDashboard::GetNumber("straight meters 2",0);
+      SmartDashboard::PutNumber("ultra test",dist);
+      if (dist <= target && init){
+        y1 = 1.0*0.844;
+        y2 = 1.0;
+      }else if(dist < 3.3 && init){
+        y1 = 0;
+        y2 = 0;
+        f1=true;
+        init=false;
+      }else if (dist >= 2.7 && f1){
+        y1 = -1.0;
+        y2 = 1.0;
+      }else if (dist < 2.7 && f1){
+        y1 = 0;
+        y2 = 0;
+        f1=false;
+        t1=true;
+      }else if (dist >= target && t1){
+        y1 = -1.0*0.844;
+        y2 = -1.0;
+      }else if(dist > 0.5 && t1){
+        y1 = 0;
+        y2 = 0;
+        t2=true;
+        t1=false;
+      }
     }
+    
+    SmartDashboard::PutNumber("Ultrasonic Inches", ultra -> GetRange().value());
+    
+    double p = frc::SmartDashboard::GetNumber("Power", 0);
+    
+    shoot1.Set(p);
+    shoot2.Set(-p);
+    SmartDashboard::PutNumber("shoot1 rpm", en1.GetVelocity());
+    SmartDashboard::PutNumber("shoot1 pos", en1.GetPosition());
+    
+
+    if(SmartDashboard::GetBoolean("Conveyer",false)){conveyer.Set(ControlMode::PercentOutput, 1);}
+    else{conveyer.Set(ControlMode::PercentOutput, 0);}
 
     // Drive for 2 seconds
     // if (gameTimer -> Get() < units::second_t{time1}) {
@@ -159,7 +218,7 @@ class Robot: public TimedRobot {
 
     float LeftSpeed = max(-1.0f, min(1.0f, (-y1/40+oldLeft*39/40)));//neo side
     float RightSpeed = max(-1.0f, min(1.0f, (y2/40+oldRight*39/40)));//battery side
-   
+    
     //set motor output speeds yay
     left_1.Set(ControlMode::PercentOutput, LeftSpeed*speedLimit);
     right_1.Set(ControlMode::PercentOutput, RightSpeed*speedLimit);
@@ -174,8 +233,13 @@ class Robot: public TimedRobot {
   void TeleopInit() {
    
     SmartDashboard::PutNumber("turn first",0.67);
-    double times[5]={1,2,3,4,5};
-    SmartDashboard::PutNumberArray("times",times);
+    SmartDashboard::PutNumber("go straight",3);
+    SmartDashboard::PutNumber("straight meters",2.8);
+    m_chooser.SetDefaultOption("auto1", AutoOptions::Auto1);
+    m_chooser.AddOption("auto2", AutoOptions::Auto2);
+    m_chooser.AddOption("auto3", AutoOptions::Auto3);
+    frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
+    
   }
 
   void TeleopPeriodic() {
@@ -231,12 +295,12 @@ class Robot: public TimedRobot {
     //float LeftSpeed = max(-1.0f, min(1.0f, ((y1*abs(y1)+x*abs(x)))/coast)+(oldLeft*(coast-1)/coast));
     //float RightSpeed = max(-1.0f, min(1.0f, -1*((y1*abs(y1)-x*abs(x))/coast)+(oldRight*(coast-1)/coast)));
 
-   
-   
+    
+    
     //SEPARATE JOYSTICK DRIVE: similar idea, now takes separate sticks instead of using x value
     float LeftSpeed = max(-1.0f, min(1.0f, (-y1/5+oldLeft*4/5)));
     float RightSpeed = max(-1.0f, min(1.0f, (y2/5+oldRight*4/5)));
-   
+    
     //set motor output speeds yay
     left_1.Set(ControlMode::PercentOutput, LeftSpeed*speedLimit);
     right_1.Set(ControlMode::PercentOutput, RightSpeed*speedLimit);
@@ -245,7 +309,7 @@ class Robot: public TimedRobot {
     //setting old speeds to current speed for next speed calc
     oldLeft=LeftSpeed;
     oldRight=RightSpeed;
-   
+    
   }
 };
 
