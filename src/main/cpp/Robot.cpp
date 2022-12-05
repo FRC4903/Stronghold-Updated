@@ -21,6 +21,13 @@ using namespace rev;
 
 class Robot: public TimedRobot {
   public:
+  bool init=true;
+  bool f1=false;
+  bool t1=false;
+  bool t2=false;
+  bool f2=false;
+  bool shoot=false;
+  bool complete=false;
 
   //Joystick axes
   int joy_x2 = 4;
@@ -146,25 +153,31 @@ class Robot: public TimedRobot {
       double target = SmartDashboard::GetNumber("straight meters",0);
       double target2 = SmartDashboard::GetNumber("straight meters 2",0);
       SmartDashboard::PutNumber("ultra test",dist);
-      if (dist <= target && gameTimer -> Get() <=2_s){
+      if (dist <= target && init){
         y1 = 1.0*0.844;
         y2 = 1.0;
-      }else if(dist < 3.3 && gameTimer -> Get() <=2_s){
+      }else if(dist < 3.3 && init){
         y1 = 0;
         y2 = 0;
-      }else if (dist >= 3.1 && gameTimer -> Get() >=2_s && gameTimer -> Get() <=3_s){
+        f1=true;
+        init=false;
+      }else if (dist >= 2.7 && f1){
         y1 = -1.0;
         y2 = 1.0;
         
-      }else if (dist < 3.1 && gameTimer -> Get() >=2_s && gameTimer -> Get() <=3_s){
+      }else if (dist < 2.7 && f1){
         y1 = 0;
         y2 = 0;
-      }else if (dist >= 0.7 && gameTimer -> Get() >=3_s && gameTimer -> Get() <=5_s){
+        f1=false;
+        t1=true;
+      }else if (dist >= target && t1){
         y1 = -1.0*0.844;
         y2 = -1.0;
-      }else if(dist > 0.5 && gameTimer -> Get() >=2_s && gameTimer -> Get() <=5_s){
+      }else if(dist > 0.5 && t1){
         y1 = 0;
         y2 = 0;
+        t2=true;
+        t1=false;
       }
     }
     
