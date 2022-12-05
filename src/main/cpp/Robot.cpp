@@ -20,7 +20,7 @@ using namespace rev;
 class Robot: public TimedRobot {
   public:
   //Joystick axes
-  int joy_x2 = 4;
+  int joy_x2 = 0;
   int joy_y1 = 5;
   int joystick_2 = 1;
   int but_lb = 5;
@@ -253,7 +253,7 @@ class Robot: public TimedRobot {
     x = (abs(x)<=0.05)? 0 : x;
 
     //gets input to shoot or intake
-    bool shoot = controller1.GetRawButton(but_rb);
+    bool doOuttake = controller1.GetRawButton(but_rb);
     bool doIntake = controller1.GetRawButton(but_lb);
     // //Sets shoot and intake to zero before setting with buttons
     conveyer.Set(ControlMode::PercentOutput, 0);
@@ -266,12 +266,11 @@ class Robot: public TimedRobot {
     if (doIntake){
       intake.Set(ControlMode::PercentOutput, -1);
     }
-    // if (shoot){
-    //   shoot1.Set(0.5);
-    //   shoot2.Set(-0.5);
-    // }
-    shoot1.Set(controller1.GetRawAxis(3));
-    shoot2.Set(-controller1.GetRawAxis(3));
+    if (doOuttake){
+      intake.Set(ControlMode::PercentOutput, 1);
+    }
+    shoot1.Set((controller1.GetRawAxis(3)+controller1.GetRawAxis(2))/2);
+    shoot2.Set(-(controller1.GetRawAxis(3)+controller1.GetRawAxis(2))/2);
     //Determines whether to limit speed and modify coast
     speedLimit=0.5;
     turnLimit=0.5;
@@ -288,24 +287,27 @@ class Robot: public TimedRobot {
 
     //ARCADE DRIVE: alters speeds of motors to constrain within -1 and 1, slowly ramps speeds up and down so it's not jerky
 
-   /* if (y1<0) {
-      x=-x;
-    }*/
 
-    //float LeftSpeed = max(-1.0f, min(1.0f, ((y1*abs(y1)+x*abs(x)))/coast)+(oldLeft*(coast-1)/coast));
-    //float RightSpeed = max(-1.0f, min(1.0f, -1*((y1*abs(y1)-x*abs(x))/coast)+(oldRight*(coast-1)/coast)));
+    if(controller0.GetRawButton(4)){
+      y1=-y1;
+    }
+
+    x=-x;
+
+    float LeftSpeed = max(-1.0f, min(1.0f, ((y1*abs(y1)+x*abs(x)))/coast)+(oldLeft*(coast-1)/coast));
+    float RightSpeed = max(-1.0f, min(1.0f, -1*((y1*abs(y1)-x*abs(x))/coast)+(oldRight*(coast-1)/coast)));
 
     
     
     //SEPARATE JOYSTICK DRIVE: similar idea, now takes separate sticks instead of using x value
-    float LeftSpeed = max(-1.0f, min(1.0f, (-y1/5+oldLeft*4/5)));
-    float RightSpeed = max(-1.0f, min(1.0f, (y2/5+oldRight*4/5)));
+    //float LeftSpeed = max(-1.0f, min(1.0f, (-y1/5+oldLeft*4/5)));
+    //float RightSpeed = max(-1.0f, min(1.0f, (y2/5+oldRight*4/5)));
     
     //set motor output speeds yay
-    left_1.Set(ControlMode::PercentOutput, LeftSpeed*speedLimit);
-    right_1.Set(ControlMode::PercentOutput, RightSpeed*speedLimit);
-    left_2.Set(ControlMode::PercentOutput, LeftSpeed*speedLimit);
-    right_2.Set(ControlMode::PercentOutput, RightSpeed*speedLimit);
+    left_1.Set(ControlMode::PercentOutput, -1*LeftSpeed*speedLimit);
+    right_1.Set(ControlMode::PercentOutput, -1*RightSpeed*speedLimit);
+    left_2.Set(ControlMode::PercentOutput, -1*LeftSpeed*speedLimit);
+    right_2.Set(ControlMode::PercentOutput, -1*RightSpeed*speedLimit);
     //setting old speeds to current speed for next speed calc
     oldLeft=LeftSpeed;
     oldRight=RightSpeed;
