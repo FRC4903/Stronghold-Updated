@@ -20,7 +20,7 @@ using namespace rev;
 class Robot: public TimedRobot {
   public:
   //Joystick axes
-  int joy_x2 = 4;
+  int joy_x2 = 0;
   int joy_y1 = 5;
   int joystick_2 = 1;
   int but_lb = 5;
@@ -112,7 +112,7 @@ class Robot: public TimedRobot {
     SmartDashboard::PutNumber("turn first periodic copy",time1);
     // double timesCopy[5] = frc::SmartDashboard::GetNumberArray("times",0);
     if(gameTimer ->Get() < units::second_t{time1}){
-      y1 = -1.0;
+      y1 = -1.0*0.844;
       y2 = 1.0;
       SmartDashboard::PutBoolean("status",true);
     }
@@ -125,53 +125,59 @@ class Robot: public TimedRobot {
 
     }else if(m_Selection == AutoOptions::Auto2){
       double time1 = SmartDashboard::GetNumber("go straight",0);
-      if (gameTimer -> Get() < units::second_t{time1}) {
-      // Drive forwards half speed
-      y1 = 1.0*0.844;
-      y2 = 1.0;
-      intake.Set(ControlMode::PercentOutput, -1);
-      conveyer.Set(ControlMode::PercentOutput, 1);
-    } else if (gameTimer -> Get() < units::second_t{time1+0.7} && gameTimer -> Get() > units::second_t{time1}){
-      y1 = 0;
-      y2 = 0;
-      }
-    }else if(m_Selection == AutoOptions::Auto3){
-      bool init=true;
-      bool f1=false;
-      bool t1=false;
-      bool t2=false;
-      bool f2=false;
-      bool shoot=false;
-      bool complete=false;
       double dist = ultra -> GetRange().value();
-      double target = SmartDashboard::GetNumber("straight meters",0);
-      double target2 = SmartDashboard::GetNumber("straight meters 2",0);
-      SmartDashboard::PutNumber("ultra test",dist);
-      if (dist <= target && init){
-        y1 = 1.0*0.844;
-        y2 = 1.0;
-      }else if(dist < 3.3 && init){
-        y1 = 0;
-        y2 = 0;
-        f1=true;
-        init=false;
-      }else if (dist >= 2.7 && f1){
-        y1 = -1.0;
-        y2 = 1.0;
-      }else if (dist < 2.7 && f1){
-        y1 = 0;
-        y2 = 0;
-        f1=false;
-        t1=true;
-      }else if (dist >= target && t1){
+      double target2 = SmartDashboard::GetNumber("straight meters2",0);
+     if(gameTimer -> Get() >= 0_s && dist >= target2){
+      //   //straight 2 power
         y1 = -1.0*0.844;
         y2 = -1.0;
-      }else if(dist > 0.5 && t1){
+      }else {
+        //straight 2 stop
         y1 = 0;
         y2 = 0;
-        t2=true;
-        t1=false;
       }
+    }else if(m_Selection == AutoOptions::Auto3){
+      double dist = ultra -> GetRange().value();
+      double target = SmartDashboard::GetNumber("straight meters",0);
+      double target2 = SmartDashboard::GetNumber("straight meters2",0);
+      double turntime = SmartDashboard::GetNumber("turn first",0);
+      double straightTime = 5;
+      double straight2 = 7;
+      double turn2start = 14;
+      SmartDashboard::PutNumber("ultra test",dist);
+      if (dist <= target && gameTimer -> Get() < 3_s ){
+        y1 = 1.0*0.844;
+        y2 = 1.0;
+      }else if( gameTimer -> Get() < units::second_t(straightTime)){
+        y1 = 0;
+        y2 = 0;
+      }else if(gameTimer -> Get() >= units::second_t(straightTime) && gameTimer -> Get() < units::second_t{straightTime+turntime}){
+        y1 = -1.0*0.844;
+        y2 = 1.0;
+      }else if(gameTimer -> Get() >= units::second_t(straightTime+turntime) && gameTimer -> Get() < units::second_t{straight2}){
+        y1 = 0;
+        y2 = 0;
+      }else if(gameTimer -> Get() >= 9_s && dist >= target2 && gameTimer -> Get() < 12_s){
+      //   //straight 2 power
+        y1 = -1.0*0.844;
+        y2 = -1.0;
+      }else if(gameTimer -> Get() < units::second_t(turn2start)){
+        //straight 2 stop
+        y1 = 0;
+        y2 = 0;
+      }else if(gameTimer -> Get() >= units::second_t(turn2start) && gameTimer -> Get() < units::second_t(turn2start + turntime)){
+        y1 = -1.0*0.844;
+        y2 = 1.0;
+      }else if(gameTimer -> Get() < 16_s){
+        y1 = 0;
+        y2 = 0;
+      }//else if(gameTimer -> Get() >= units::second_t(straightTime) && gameTimer -> Get() < units::second_t{straightTime+turntime}){
+      //   y1 = -1.0*0.844;
+      //   y2 = 1.0;
+      // }else if(gameTimer -> Get() >= units::second_t(straightTime+turntime) && gameTimer -> Get() < units::second_t{straight2}){
+      //   y1 = 0;
+      //   y2 = 0;
+      // }
     }
     
     SmartDashboard::PutNumber("Ultrasonic Inches", ultra -> GetRange().value());
@@ -232,9 +238,10 @@ class Robot: public TimedRobot {
 
   void TeleopInit() {
    
-    SmartDashboard::PutNumber("turn first",0.67);
+    SmartDashboard::PutNumber("turn first",0.90);
     SmartDashboard::PutNumber("go straight",3);
-    SmartDashboard::PutNumber("straight meters",2.8);
+    SmartDashboard::PutNumber("straight meters",2.113);
+     SmartDashboard::PutNumber("straight meters2",1.2);
     m_chooser.SetDefaultOption("auto1", AutoOptions::Auto1);
     m_chooser.AddOption("auto2", AutoOptions::Auto2);
     m_chooser.AddOption("auto3", AutoOptions::Auto3);
@@ -253,7 +260,7 @@ class Robot: public TimedRobot {
     x = (abs(x)<=0.05)? 0 : x;
 
     //gets input to shoot or intake
-    bool shoot = controller1.GetRawButton(but_rb);
+    bool doOuttake = controller1.GetRawButton(but_rb);
     bool doIntake = controller1.GetRawButton(but_lb);
     // //Sets shoot and intake to zero before setting with buttons
     conveyer.Set(ControlMode::PercentOutput, 0);
@@ -266,12 +273,11 @@ class Robot: public TimedRobot {
     if (doIntake){
       intake.Set(ControlMode::PercentOutput, -1);
     }
-    // if (shoot){
-    //   shoot1.Set(0.5);
-    //   shoot2.Set(-0.5);
-    // }
-    shoot1.Set(controller1.GetRawAxis(3));
-    shoot2.Set(-controller1.GetRawAxis(3));
+    if (doOuttake){
+      intake.Set(ControlMode::PercentOutput, 1);
+    }
+    shoot1.Set((controller1.GetRawAxis(3)+controller1.GetRawAxis(2))/2);
+    shoot2.Set(-(controller1.GetRawAxis(3)+controller1.GetRawAxis(2))/2);
     //Determines whether to limit speed and modify coast
     speedLimit=0.5;
     turnLimit=0.5;
@@ -288,24 +294,27 @@ class Robot: public TimedRobot {
 
     //ARCADE DRIVE: alters speeds of motors to constrain within -1 and 1, slowly ramps speeds up and down so it's not jerky
 
-   /* if (y1<0) {
-      x=-x;
-    }*/
 
-    //float LeftSpeed = max(-1.0f, min(1.0f, ((y1*abs(y1)+x*abs(x)))/coast)+(oldLeft*(coast-1)/coast));
-    //float RightSpeed = max(-1.0f, min(1.0f, -1*((y1*abs(y1)-x*abs(x))/coast)+(oldRight*(coast-1)/coast)));
+    if(controller0.GetRawButton(4)){
+      y1=-y1;
+    }
+
+    x=-x;
+
+    float LeftSpeed = max(-1.0f, min(1.0f, ((y1*abs(y1)+x*abs(x)))/coast)+(oldLeft*(coast-1)/coast));
+    float RightSpeed = max(-1.0f, min(1.0f, -1*((y1*abs(y1)-x*abs(x))/coast)+(oldRight*(coast-1)/coast)));
 
     
     
     //SEPARATE JOYSTICK DRIVE: similar idea, now takes separate sticks instead of using x value
-    float LeftSpeed = max(-1.0f, min(1.0f, (-y1/5+oldLeft*4/5)));
-    float RightSpeed = max(-1.0f, min(1.0f, (y2/5+oldRight*4/5)));
+    //float LeftSpeed = max(-1.0f, min(1.0f, (-y1/5+oldLeft*4/5)));
+    //float RightSpeed = max(-1.0f, min(1.0f, (y2/5+oldRight*4/5)));
     
     //set motor output speeds yay
-    left_1.Set(ControlMode::PercentOutput, LeftSpeed*speedLimit);
-    right_1.Set(ControlMode::PercentOutput, RightSpeed*speedLimit);
-    left_2.Set(ControlMode::PercentOutput, LeftSpeed*speedLimit);
-    right_2.Set(ControlMode::PercentOutput, RightSpeed*speedLimit);
+    left_1.Set(ControlMode::PercentOutput, -1*LeftSpeed*speedLimit);
+    right_1.Set(ControlMode::PercentOutput, -1*RightSpeed*speedLimit);
+    left_2.Set(ControlMode::PercentOutput, -1*LeftSpeed*speedLimit);
+    right_2.Set(ControlMode::PercentOutput, -1*RightSpeed*speedLimit);
     //setting old speeds to current speed for next speed calc
     oldLeft=LeftSpeed;
     oldRight=RightSpeed;
